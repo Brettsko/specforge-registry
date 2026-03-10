@@ -185,4 +185,43 @@ LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/login" \
   -d "{\"email\":\"$REGISTER_EMAIL\",\"password\":\"$REGISTER_PASSWORD\"}")
 echo "Login Response: $LOGIN_RESPONSE"
 echo "$LOGIN_RESPONSE" | grep -q "access_token" || (echo "ERROR: Missing access_token in login response" && exit 1)
-echo "$LOGIN_
+echo "$LOGIN_RESPONSE" | grep -q "refresh_token" || (echo "ERROR: Missing refresh_token in login response" && exit 1)
+echo "PASS: Login returns access_token and refresh_token"
+
+ACCESS_TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+REFRESH_TOKEN=$(echo "$LOGIN_RESPONSE" | grep -o '"refresh_token":"[^"]*"' | cut -d'"' -f4)
+
+echo "=== Test 6: Protected route rejects request without token ==="
+NO_TOKEN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/profile")
+test "$NO_TOKEN_STATUS" = "401" || (echo "ERROR: Expected 401 without token, got $NO_TOKEN_STATUS" && exit 1)
+echo "PASS: Protected route rejects missing token"
+
+echo "=== Test 7: Protected route rejects invalid token ==="
+FAKE_TOKEN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/profile" \
+  -H "Authorization: Bearer faketoken.invalid.signature")
+test "$FAKE_TOKEN_STATUS" = "401" || (echo "ERROR: Expected 401 with fake token, got $FAKE_TOKEN_STATUS" && exit 1)
+echo "PASS: Protected route rejects invalid token"
+
+echo "=== Test 8: Protected route returns 200 with valid token ==="
+PROFILE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/profile" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")
+test "$PROFILE_STATUS" = "200" || (echo "ERROR: Expected 200 with valid token, got $PROFILE_STATUS" && exit 1)
+echo "PASS: Protected route returns 200 with valid token"
+
+echo "=== Test 9: Refresh token returns new access token ==="
+REFRESH_RESPONSE=$(curl -s -X POST "$BASE_URL/refresh" \
+  -H "Content-Type: application/json" \
+  -d "{\"refresh_token\":\"$REFRESH_TOKEN\"}")
+echo "$REFRESH_RESPONSE" | grep -q "access_token" || (echo "ERROR: Missing access_token in refresh response" && exit 1)
+echo "PASS: Refresh returns new access token"
+
+echo "=== Test 10: Refresh rejects invalid refresh token ==="
+FAKE_REFRESH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/refresh" \
+  -H "Content-Type: application/json" \
+  -d "{\"refresh_token\":\"fakeinvalidtoken\"}")
+test "$FAKE_REFRESH_STATUS" = "401" || (echo "ERROR: Expected 401 with fake refresh token, got $FAKE_REFRESH_STATUS" && exit 1)
+echo "PASS: Refresh rejects invalid token"
+
+echo ""
+echo "All acceptance criteria verified ✓"
+```
