@@ -8,6 +8,7 @@ Verified Golden Specs for [specforge](https://github.com/Brettsko/specforge) —
 |------|-------------|---------|
 | `jwt-auth-server` | JWT auth with register, login, refresh tokens, and protected routes. bcrypt + SQLite. | ✅ 10/10 |
 | `stripe-subscriptions` | Stripe webhook handling, customer creation, subscription tracking. SQLite. | ✅ 7/7 |
+| `crud-rest-api` | TypeScript REST API for task management with CRUD, filtering, and pagination. SQLite. | ✅ 8/8 |
 
 ## Usage
 
